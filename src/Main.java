@@ -82,11 +82,20 @@ class Main {
         List<Object> psy = new ArrayList<>();
         List<Object> ptaki = new ArrayList<>();
 
-        for (int i = 1; i <= 4; i++) {
-            koty.add(new Kot("Kot_" + i));
-            psy.add(new Pies("Pies_" + i));
-            ptaki.add(new Ptak("Ptak_" + i));
-        }
+        koty.add(new Kot("Kot_1", "Siberian", 2));
+        koty.add(new Kot("Kot_2", "Persian", 3));
+        koty.add(new Kot("Kot_3", "Maine Coon", 1));
+        koty.add(new Kot("Kot_4", "British Shorthair", 4));
+
+        psy.add(new Pies("Pies_1", "Small", true));
+        psy.add(new Pies("Pies_2", "Medium", false));
+        psy.add(new Pies("Pies_3", "Large", true));
+        psy.add(new Pies("Pies_4", "Medium", true));
+
+        ptaki.add(new Ptak("Ptak_1", "Red", 0.25));
+        ptaki.add(new Ptak("Ptak_2", "Green", 0.30));
+        ptaki.add(new Ptak("Ptak_3", "Blue", 0.20));
+        ptaki.add(new Ptak("Ptak_4", "Yellow", 0.35));
 
         objectMap.put("koty", koty);
         objectMap.put("psy", psy);
@@ -218,39 +227,51 @@ class Main {
 
 class Kot implements Serializable {
     private final String name;
+    private final String breed;
+    private final int age;
 
-    public Kot(String name) {
+    public Kot(String name, String breed, int age) {
         this.name = name;
+        this.breed = breed;
+        this.age = age;
     }
 
     @Override
     public String toString() {
-        return "Kot{nazwa='" + name + "'}";
+        return "Kot{nazwa='" + name + "', rasa='" + breed + "', wiek=" + age + "}";
     }
 }
 
 class Pies implements Serializable {
     private final String name;
+    private final String size;
+    private final boolean isTrained;
 
-    public Pies(String name) {
+    public Pies(String name, String size, boolean isTrained) {
         this.name = name;
+        this.size = size;
+        this.isTrained = isTrained;
     }
 
     @Override
     public String toString() {
-        return "Pies{nazwa='" + name + "'}";
+        return "Pies{nazwa='" + name + "', rozmiar='" + size + "', wyszkolony=" + isTrained + "}";
     }
 }
 
 class Ptak implements Serializable {
     private final String name;
+    private final String color;
+    private final double wingspan;
 
-    public Ptak(String name) {
+    public Ptak(String name, String color, double wingspan) {
         this.name = name;
+        this.color = color;
+        this.wingspan = wingspan;
     }
 
     @Override
     public String toString() {
-        return "Ptak{nazwa='" + name + "'}";
+        return "Ptak{nazwa='" + name + "', kolor='" + color + "', rozpiętość skrzydeł=" + wingspan + "}";
     }
 }
