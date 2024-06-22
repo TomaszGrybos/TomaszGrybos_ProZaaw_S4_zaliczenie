@@ -6,7 +6,7 @@ import java.util.concurrent.*;
 class Main {
     // Constants
     private static final int PORT = 12345;
-    private static final int MAX_CLIENTS = 3; // Change this to 3
+    private static final int MAX_CLIENTS = 3;
 
     // Shared resources
     private static final Map<String, List<Object>> objectMap = new HashMap<>();
@@ -48,7 +48,11 @@ class Main {
                         new Thread(clientHandler).start();
                         servedClients++; // Increment the counter when a client is served
                     } else {
-                        waitingClients.add(clientHandler);
+                        try (ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream())) {
+                            out.writeObject("REFUSED");
+                            out.flush();
+                        }
+                        clientSocket.close();
                     }
                 }
             }

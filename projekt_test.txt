@@ -6,12 +6,15 @@ import java.util.concurrent.*;
 class Main {
     // Constants
     private static final int PORT = 12345;
-    private static final int MAX_CLIENTS = 5;
+    private static final int MAX_CLIENTS = 3; // Change this to 3
 
     // Shared resources
     private static final Map<String, List<Object>> objectMap = new HashMap<>();
     private static final Queue<ClientHandler> waitingClients = new LinkedList<>();
     private static final Set<ClientHandler> activeClients = ConcurrentHashMap.newKeySet();
+
+    // Add a counter for served clients
+    private static int servedClients = 0;
 
     // Main method
     public static void main(String[] args) {
@@ -19,7 +22,7 @@ class Main {
             startServer();
         } else {
             int clientId = Integer.parseInt(args[0]);
-            startClient(clientId);
+            new Thread(new ClientThread(clientId)).start();
         }
     }
 
@@ -29,8 +32,13 @@ class Main {
         initializeObjects();
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            System.out.println("Server started...");
+            System.out.println("Serwer uruchomiony...");
             while (true) {
+                if (servedClients >= MAX_CLIENTS) {
+                    System.out.println("Serwer osiągnął maksymalną liczbę klientów. Zamykanie...");
+                    break;
+                }
+
                 Socket clientSocket = serverSocket.accept();
 
                 ClientHandler clientHandler = new ClientHandler(clientSocket);
@@ -38,6 +46,7 @@ class Main {
                     if (activeClients.size() < MAX_CLIENTS) {
                         activeClients.add(clientHandler);
                         new Thread(clientHandler).start();
+                        servedClients++; // Increment the counter when a client is served
                     } else {
                         waitingClients.add(clientHandler);
                     }
@@ -78,37 +87,29 @@ class Main {
                  ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream())) {
 
                 clientId = in.readInt();
-
                 out.writeObject("OK");
                 out.flush();
-                System.out.println("Client ID: " + clientId);
-                System.out.println("Client " + clientId + " connected.");
-
-                synchronized (waitingClients) {
-                    while (activeClients.size() >= MAX_CLIENTS) {
-                        waitingClients.wait(); // Wait until a slot is available
-                    }
-                    activeClients.add(this);
-                }
+                System.out.println("ID klienta: " + clientId);
+                System.out.println("Klient " + clientId + " połączony.");
 
                 while (true) {
                     try {
                         String request = (String) in.readObject();
-                        System.out.println("Client " + clientId + " requested: " + request);
+                        System.out.println("Klient " + clientId + " zażądał: " + request);
 
                         String key = request.split("_")[1].toLowerCase();
                         List<Object> objects = objectMap.getOrDefault(key, new ArrayList<>());
 
                         out.writeObject(objects);
                         out.flush();
-                        System.out.println("Sent objects of type " + key + " to client " + clientId + ": " + objects);
+                        System.out.println("Wysłano obiekty typu " + key + " do klienta " + clientId + ": " + objects);
                     } catch (EOFException | SocketException e) {
                         break;
                     } catch (ClassNotFoundException | IOException e) {
                         e.printStackTrace();
                     }
                 }
-            } catch (IOException | InterruptedException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             } finally {
                 synchronized (waitingClients) {
@@ -116,61 +117,89 @@ class Main {
                     if (!waitingClients.isEmpty()) {
                         ClientHandler nextClient = waitingClients.poll();
                         activeClients.add(nextClient);
-                        synchronized (nextClient) {
-                            nextClient.notify(); // Notify the next waiting client
-                        }
+                        new Thread(nextClient).start();
                     }
                 }
-                System.out.println("Client " + clientId + " disconnected.");
+                System.out.println("Klient " + clientId + " rozłączony.");
             }
         }
     }
 
     // Client logic
+    private static class ClientThread implements Runnable {
+        private int clientId;
+
+        public ClientThread(int clientId) {
+            this.clientId = clientId;
+        }
+
+        @Override
+        public void run() {
+            startClient(clientId);
+        }
+    }
+
     private static void startClient(int clientId) {
         try (Socket socket = new Socket("localhost", PORT);
              ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
              ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
 
-            System.out.println("Client " + clientId + ": Connecting to server...");
+            System.out.println("Klient " + clientId + ": Łączenie z serwerem...");
             out.writeInt(clientId);
             out.flush();
 
             String response = (String) in.readObject();
-            System.out.println("Client " + clientId + ": Response from server: " + response);
+            System.out.println("Klient " + clientId + ": Odpowiedź z serwera: " + response);
 
             if ("REFUSED".equals(response)) {
-                System.out.println("Client " + clientId + ": Connection refused. Exiting...");
+                System.out.println("Klient " + clientId + ": Połączenie odrzucone. Zamykanie...");
+                return;
+            } else if ("Server has reached the maximum number of clients. Shutting down...".equals(response)) {
+                System.out.println("Klient " + clientId + ": Serwer nie może obsłużyć więcej klientów. Zamykanie...");
                 return;
             } else {
-                System.out.println("Client " + clientId + ": Connected successfully.");
+                System.out.println("Klient " + clientId + ": Połączono pomyślnie.");
             }
 
-            requestObjects(in, out, clientId, "get_Koty");
-            requestObjects(in, out, clientId, "get_Psy");
-            requestObjects(in, out, clientId, "get_Ptaki");
+            // Change the requests based on the clientId
+            if (clientId == 1) {
+                requestObjects(in, out, clientId, "get_Koty");
+            } else if (clientId == 2) {
+                requestObjects(in, out, clientId, "get_Psy");
+            } else if (clientId == 3) {
+                requestObjects(in, out, clientId, "get_Ptaki");
+            }
+        } catch (ConnectException e) {
+            System.out.println("Klient " + clientId + ": Nie można połączyć się z serwerem. Może być wyłączony lub osiągnął maksymalną pojemność. Proszę spróbować później.");
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
     }
 
     private static void requestObjects(ObjectInputStream in, ObjectOutputStream out, int clientId, String request) throws IOException, ClassNotFoundException {
-        System.out.println("Client " + clientId + ": Requesting " + request);
+        System.out.println("Klient " + clientId + ": Żądanie " + request);
+        // Add a random delay before sending the request
+        try {
+            int delay = new Random().nextInt(5000) + 1000; // Random delay between 1000ms (1 second) and 5000ms (5 seconds)
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         out.writeObject(request);
         out.flush();
 
         try {
             List<Object> objects = (List<Object>) in.readObject();
-            System.out.println("Client " + clientId + ": Received " + request + ": " + objects);
+            System.out.println("Klient " + clientId + ": Otrzymano " + request + ": " + objects);
         } catch (ClassCastException e) {
-            System.out.println("Client " + clientId + ": Error casting received object.");
+            System.out.println("Klient " + clientId + ": Błąd rzutowania otrzymanego obiektu.");
         }
     }
 }
 
 // Object classes
 class Kot implements Serializable {
-    private String name;
+    private final String name;
 
     public Kot(String name) {
         this.name = name;
@@ -178,12 +207,12 @@ class Kot implements Serializable {
 
     @Override
     public String toString() {
-        return "Kot{name='" + name + "'}";
+        return "Kot{nazwa='" + name + "'}";
     }
 }
 
 class Pies implements Serializable {
-    private String name;
+    private final String name;
 
     public Pies(String name) {
         this.name = name;
@@ -191,12 +220,12 @@ class Pies implements Serializable {
 
     @Override
     public String toString() {
-        return "Pies{name='" + name + "'}";
+        return "Pies{nazwa='" + name + "'}";
     }
 }
 
 class Ptak implements Serializable {
-    private String name;
+    private final String name;
 
     public Ptak(String name) {
         this.name = name;
@@ -204,6 +233,6 @@ class Ptak implements Serializable {
 
     @Override
     public String toString() {
-        return "Ptak{name='" + name + "'}";
+        return "Ptak{nazwa='" + name + "'}";
     }
 }
