@@ -4,18 +4,14 @@ import java.util.*;
 import java.util.concurrent.*;
 
 class Main {
-    // Constants
     private static final int PORT = 12345;
     private static final int MAX_CLIENTS = 3;
 
-    // Shared resources
     private static final Map<String, List<Object>> objectMap = new HashMap<>();
     private static final Set<ClientHandler> activeClients = ConcurrentHashMap.newKeySet();
 
-    // Flag to control the server loop
     private static volatile boolean running = true;
 
-    // Main method
     public static void main(String[] args) {
         if (args.length == 0) {
             startServer();
@@ -25,12 +21,9 @@ class Main {
         }
     }
 
-    // Server logic
     private static void startServer() {
-        // Initialize objects
         initializeObjects();
 
-        // Thread to listen for console input to stop the server
         new Thread(() -> {
             try (Scanner scanner = new Scanner(System.in)) {
                 while (running) {
@@ -64,14 +57,13 @@ class Main {
                         }
                     }
                 } catch (SocketException e) {
-                    if (!running) break;  // Ignore the exception if stopping the server
+                    if (!running) break;
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        // Close all active client connections
         synchronized (activeClients) {
             for (ClientHandler clientHandler : activeClients) {
                 try {
@@ -154,7 +146,6 @@ class Main {
         }
     }
 
-    // Client logic
     private static class ClientThread implements Runnable {
         private int clientId;
 
@@ -187,7 +178,6 @@ class Main {
                 System.out.println("Klient " + clientId + ": Połączono pomyślnie.");
             }
 
-            // Change the requests based on the clientId
             if (clientId == 1) {
                 requestObjects(in, out, clientId, "get_Koty");
             } else if (clientId == 2) {
@@ -195,7 +185,7 @@ class Main {
             } else if (clientId == 3) {
                 requestObjects(in, out, clientId, "get_Ptaki");
             } else {
-                requestObjects(in, out, clientId, "get_Koty"); // Default request for other clients
+                requestObjects(in, out, clientId, "get_Koty");
             }
         } catch (ConnectException e) {
             System.out.println("Klient " + clientId + ": Nie można połączyć się z serwerem. Może być wyłączony lub osiągnął maksymalną pojemność. Proszę spróbować później.");
@@ -208,9 +198,8 @@ class Main {
 
     private static void requestObjects(ObjectInputStream in, ObjectOutputStream out, int clientId, String request) throws IOException, ClassNotFoundException {
         System.out.println("Klient " + clientId + ": Żądanie " + request);
-        // Add a random delay before sending the request
         try {
-            int delay = new Random().nextInt(10000) + 5000; // Random delay between 1000ms (1 second) and 5000ms (5 seconds)
+            int delay = new Random().nextInt(10000) + 5000;
             Thread.sleep(delay);
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -227,7 +216,6 @@ class Main {
     }
 }
 
-// Object classes
 class Kot implements Serializable {
     private final String name;
 
