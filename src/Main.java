@@ -10,11 +10,10 @@ class Main {
 
     // Shared resources
     private static final Map<String, List<Object>> objectMap = new HashMap<>();
-    private static final Queue<ClientHandler> waitingClients = new LinkedList<>();
     private static final Set<ClientHandler> activeClients = ConcurrentHashMap.newKeySet();
 
-    // Add a counter for served clients
-    private static int servedClients = 0;
+    // Flag to control the server loop
+    private static volatile boolean running = true;
 
     // Main method
     public static void main(String[] args) {
@@ -31,34 +30,59 @@ class Main {
         // Initialize objects
         initializeObjects();
 
+        // Thread to listen for console input to stop the server
+        new Thread(() -> {
+            try (Scanner scanner = new Scanner(System.in)) {
+                while (running) {
+                    if (scanner.nextLine().trim().equalsIgnoreCase("STOP")) {
+                        running = false;
+                        System.out.println("Serwer zamyka się...");
+                    }
+                }
+            }
+        }).start();
+
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Serwer uruchomiony...");
-            while (true) {
-                if (servedClients >= MAX_CLIENTS) {
-                    System.out.println("Serwer osiągnął maksymalną liczbę klientów. Zamykanie...");
-                    break;
-                }
+            while (running) {
+                if (!running) break;
 
-                Socket clientSocket = serverSocket.accept();
+                try {
+                    Socket clientSocket = serverSocket.accept();
 
-                ClientHandler clientHandler = new ClientHandler(clientSocket);
-                synchronized (waitingClients) {
-                    if (activeClients.size() < MAX_CLIENTS) {
-                        activeClients.add(clientHandler);
-                        new Thread(clientHandler).start();
-                        servedClients++; // Increment the counter when a client is served
-                    } else {
-                        try (ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream())) {
-                            out.writeObject("REFUSED");
-                            out.flush();
+                    synchronized (activeClients) {
+                        if (activeClients.size() < MAX_CLIENTS) {
+                            ClientHandler clientHandler = new ClientHandler(clientSocket);
+                            activeClients.add(clientHandler);
+                            new Thread(clientHandler).start();
+                        } else {
+                            try (ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream())) {
+                                out.writeObject("REFUSED");
+                                out.flush();
+                            }
+                            clientSocket.close();
                         }
-                        clientSocket.close();
                     }
+                } catch (SocketException e) {
+                    if (!running) break;  // Ignore the exception if stopping the server
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        // Close all active client connections
+        synchronized (activeClients) {
+            for (ClientHandler clientHandler : activeClients) {
+                try {
+                    clientHandler.closeConnection();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        System.out.println("Serwer został zamknięty.");
     }
 
     private static void initializeObjects() {
@@ -96,7 +120,7 @@ class Main {
                 System.out.println("ID klienta: " + clientId);
                 System.out.println("Klient " + clientId + " połączony.");
 
-                while (true) {
+                while (running) {
                     try {
                         String request = (String) in.readObject();
                         System.out.println("Klient " + clientId + " zażądał: " + request);
@@ -116,15 +140,16 @@ class Main {
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
-                synchronized (waitingClients) {
+                synchronized (activeClients) {
                     activeClients.remove(this);
-                    if (!waitingClients.isEmpty()) {
-                        ClientHandler nextClient = waitingClients.poll();
-                        activeClients.add(nextClient);
-                        new Thread(nextClient).start();
-                    }
                 }
                 System.out.println("Klient " + clientId + " rozłączony.");
+            }
+        }
+
+        public void closeConnection() throws IOException {
+            if (clientSocket != null && !clientSocket.isClosed()) {
+                clientSocket.close();
             }
         }
     }
@@ -158,9 +183,6 @@ class Main {
             if ("REFUSED".equals(response)) {
                 System.out.println("Klient " + clientId + ": Połączenie odrzucone. Zamykanie...");
                 return;
-            } else if ("Server has reached the maximum number of clients. Shutting down...".equals(response)) {
-                System.out.println("Klient " + clientId + ": Serwer nie może obsłużyć więcej klientów. Zamykanie...");
-                return;
             } else {
                 System.out.println("Klient " + clientId + ": Połączono pomyślnie.");
             }
@@ -172,9 +194,13 @@ class Main {
                 requestObjects(in, out, clientId, "get_Psy");
             } else if (clientId == 3) {
                 requestObjects(in, out, clientId, "get_Ptaki");
+            } else {
+                requestObjects(in, out, clientId, "get_Koty"); // Default request for other clients
             }
         } catch (ConnectException e) {
             System.out.println("Klient " + clientId + ": Nie można połączyć się z serwerem. Może być wyłączony lub osiągnął maksymalną pojemność. Proszę spróbować później.");
+        } catch (SocketException e) {
+            System.out.println("Klient " + clientId + ": Połączenie zostało przerwane. Serwer może być wyłączony.");
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -184,7 +210,7 @@ class Main {
         System.out.println("Klient " + clientId + ": Żądanie " + request);
         // Add a random delay before sending the request
         try {
-            int delay = new Random().nextInt(5000) + 1000; // Random delay between 1000ms (1 second) and 5000ms (5 seconds)
+            int delay = new Random().nextInt(10000) + 5000; // Random delay between 1000ms (1 second) and 5000ms (5 seconds)
             Thread.sleep(delay);
         } catch (InterruptedException e) {
             e.printStackTrace();
