@@ -1,2 +1,2 @@
 # TomaszGrybos_ProZaaw_S4_zaliczenie
-Repozytorium zawiera przygotowany projekt zaliczeniowy z przedmiotu "Programowanie zaawansowane" (ćwiczenia)
+Repozytorium zawiera dwie gałęzie: main oraz master. Przygotowany projekt zaliczeniowy z przedmiotu "Programowanie zaawansowane (Ćwiczenia)" znajduje się w gałęzi master.
