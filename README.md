@@ -1,7 +1,7 @@
 
 # Wymagania:
-## - Środowisko IntelliJ IDEA 2024.1.3
-## - Środowisko uruchomieniowe OpenJdk
+- Środowisko IntelliJ IDEA 2024.1.3
+- Środowisko uruchomieniowe OpenJdk
 
 # Uruchomienie:
 ## Pobierz repozytorium z github 
