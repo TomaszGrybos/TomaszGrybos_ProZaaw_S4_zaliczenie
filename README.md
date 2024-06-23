@@ -8,7 +8,7 @@ git checkout master
 
 ## Otwórz projekt ProZaaw_S4_ProjektAplikacja.iml w IntellijJ IDEA wersja 2024.1.3 ultimate (evaluation)
 
-## W module settings upewnij się, że jest poprawnie skonfigurowana openjdk 19
+## W ustawieniach modułu upewnij się, że jest poprawnie skonfigurowana openjdk 19
 
 ## Zbuduj/skompiluj projekt
  
