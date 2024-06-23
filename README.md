@@ -1,21 +1,21 @@
 
-## Wymagania
-# Pobierz repozytorium z github 
+# Wymagania
+## Pobierz repozytorium z github 
 
 git clone https://github.com/TomaszGrybos/TomaszGrybos_ProZaaw_S4_zaliczenie.git
 
 git checkout master
 
-# Otwórz projekt ProZaaw_S4_ProjektAplikacja.iml w IntellijJ IDEA wersja 2024.1.3 ultimate (evaluation)
+## Otwórz projekt ProZaaw_S4_ProjektAplikacja.iml w IntellijJ IDEA wersja 2024.1.3 ultimate (evaluation)
 
-# W module settings upewnij się, że jest poprawnie skonfigurowana openjdk 19
+## W module settings upewnij się, że jest poprawnie skonfigurowana openjdk 19
 
-# Zbuduj/skompiluj projekt
+## Zbuduj/skompiluj projekt
  
 
-## Przykład uruchomienia:
+# Przykład uruchomienia:
 
-# Okno 1 - serwer
+## Okno 1 - serwer
 Uruchom klasę Main bez parametrów, co spowoduje uruchomienie programu w trybie serwera.
 np. przez Server.cmd lub polecenia:
 
@@ -27,7 +27,7 @@ pause
 by zakończyć proces serwera wisz w jego oknie STOP
 
 
-# Okno 2 - start 4 klientów równolegle (windows)
+## Okno 2 - start 4 klientów równolegle (windows)
 
 uruchom test.bat
 
@@ -39,7 +39,7 @@ start .\Client.cmd 33 Ptaki
 start .\Client.cmd 4 Konie
 
 
-# Przykładowa odpowiedź serwera:
+## Przykładowa odpowiedź serwera:
 
 Serwer uruchomiony...
 pause
@@ -64,7 +64,7 @@ STOP
 Serwer zamyka się...
 Serwer został zamknięty.
 
-# Przykładowe odpowiedzi klientów:
+## Przykładowe odpowiedzi klientów:
 
 c:\Users\Tomek\WSB-S3\ProZaaw_S4_ProjektAplikacja\out\production\ProZaaw_S4_ProjektAplikacja>java.exe Main 33 Ptaki
 Klient 33: Łączenie z serwerem...
