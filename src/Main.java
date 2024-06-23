@@ -17,7 +17,8 @@ class Main {
             startServer();
         } else {
             int clientId = Integer.parseInt(args[0]);
-            new Thread(new ClientThread(clientId)).start();
+            String objectType = args[1];
+            new Thread(new ClientThread(clientId,objectType)).start();
         }
     }
 
@@ -37,6 +38,8 @@ class Main {
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Serwer uruchomiony...");
+            serverSocket.setSoTimeout(1000);
+
             while (running) {
                 if (!running) break;
 
@@ -50,6 +53,7 @@ class Main {
                             new Thread(clientHandler).start();
                         } else {
                             try (ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream())) {
+                                System.err.println("Przekroczono limit aktywnych klientów, odrzucono połączenie klienta ");
                                 out.writeObject("REFUSED");
                                 out.flush();
                             }
@@ -57,6 +61,9 @@ class Main {
                         }
                     }
                 } catch (SocketException e) {
+                    if (!running) break;
+                }
+                catch (SocketTimeoutException e) {
                     if (!running) break;
                 }
             }
@@ -110,6 +117,10 @@ class Main {
             this.clientSocket = socket;
         }
 
+        public int getRandomNumber(int min, int max) {
+            return (int) ((Math.random() * (max - min)) + min);
+        }
+
         @Override
         public void run() {
             try (ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
@@ -127,7 +138,11 @@ class Main {
                         System.out.println("Klient " + clientId + " zażądał: " + request);
 
                         String key = request.split("_")[1].toLowerCase();
-                        List<Object> objects = objectMap.getOrDefault(key, new ArrayList<>());
+                        if (!objectMap.containsKey(key)) {
+                            key = (String) objectMap.keySet().toArray() [getRandomNumber(0,objectMap.size())];
+                            System.out.println("Klient " + clientId + " żąda nieistniejącego typu objektów, zwracam : " + key);
+                        }
+                        List<Object> objects = objectMap.get(key);
 
                         out.writeObject(objects);
                         out.flush();
@@ -157,18 +172,20 @@ class Main {
 
     private static class ClientThread implements Runnable {
         private int clientId;
+        private String objectType;
 
-        public ClientThread(int clientId) {
+        public ClientThread(int clientId,String objectType) {
             this.clientId = clientId;
+            this.objectType = objectType;
         }
 
         @Override
         public void run() {
-            startClient(clientId);
+            startClient(clientId,objectType);
         }
     }
 
-    private static void startClient(int clientId) {
+    private static void startClient(int clientId, String objectType) {
         try (Socket socket = new Socket("localhost", PORT);
              ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
              ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
@@ -187,15 +204,8 @@ class Main {
                 System.out.println("Klient " + clientId + ": Połączono pomyślnie.");
             }
 
-            if (clientId == 1) {
-                requestObjects(in, out, clientId, "get_Koty");
-            } else if (clientId == 2) {
-                requestObjects(in, out, clientId, "get_Psy");
-            } else if (clientId == 3) {
-                requestObjects(in, out, clientId, "get_Ptaki");
-            } else {
-                requestObjects(in, out, clientId, "get_Koty");
-            }
+            requestObjects(in, out, clientId, "get_"+objectType);
+
         } catch (ConnectException e) {
             System.out.println("Klient " + clientId + ": Nie można połączyć się z serwerem. Może być wyłączony lub osiągnął maksymalną pojemność. Proszę spróbować później.");
         } catch (SocketException e) {
